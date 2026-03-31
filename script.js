@@ -1,5 +1,5 @@
 // ==========================================
-// CONEXÃO SUPABASE SEGURA (Não vai travar o site se a net falhar)
+// CONEXÃO SUPABASE SEGURA 
 // ==========================================
 let supabaseAPI = null;
 try {
@@ -14,7 +14,7 @@ try {
     console.error("Erro na conexão com o banco:", e);
 }
 
-// Arrays globais para guardar o que vier do banco
+// Arrays globais
 let listaEquipesGlobal = [];
 let listaUsuariosGlobal = [];
 
@@ -74,9 +74,6 @@ function mostrarAba(idAba) {
     if(idAba === 'aba-usuarios') document.getElementById('btn-usuarios').classList.add('active');
 }
 
-// ==========================================
-// PREENCHIMENTO DINÂMICO DOS SELECTS (VERSÃO À PROVA DE FALHAS)
-// ==========================================
 function preencherSelectsRegiaoBase() {
     const selectCadastro = document.getElementById('regiaoBase');
     const selectEdicao = document.getElementById('editRegiaoBase');
@@ -86,7 +83,6 @@ function preencherSelectsRegiaoBase() {
         optionsHTML += `<option value="${regiao}">${regiao}</option>`;
     });
 
-    // Coloca as opções apenas se a caixa existir na tela
     if (selectCadastro) selectCadastro.innerHTML = optionsHTML;
     if (selectEdicao) selectEdicao.innerHTML = optionsHTML;
 }
@@ -116,7 +112,7 @@ async function salvarUsuario() {
     
     const idEdit = document.getElementById('editUsuarioId').value;
     const nome = document.getElementById('nomeUsuario').value;
-    const email = document.getElementById('emailUsuario').value;
+    const email = document.getElementById('emailUsuario').value.trim(); // Este campo agora é o Login
     const senha = document.getElementById('senhaUsuario').value;
     const nivel = document.getElementById('nivelUsuario').value;
 
@@ -143,7 +139,7 @@ function prepararEdicaoUsuario(index) {
     let user = listaUsuariosGlobal[index];
     document.getElementById('editUsuarioId').value = user.id;
     document.getElementById('nomeUsuario').value = user.nome;
-    document.getElementById('emailUsuario').value = user.email;
+    document.getElementById('emailUsuario').value = user.email; // Coluna email atuando como Login
     document.getElementById('senhaUsuario').value = user.senha;
     document.getElementById('nivelUsuario').value = user.nivel;
     
@@ -184,7 +180,7 @@ function renderizarTabelaUsuarios() {
         const badgeClasse = user.nivel === 'Admin' ? 'badge-admin' : 'badge-comum';
         listaUsuarios.innerHTML += `
             <tr>
-                <td><strong>${user.nome}</strong><br><small style="color:#7f8c8d">${user.email}</small></td>
+                <td><strong>${user.nome}</strong><br><small style="color:#7f8c8d"><i class="fas fa-user-circle"></i> ${user.email}</small></td>
                 <td><span class="badge-status ${badgeClasse}">${user.nivel}</span></td>
                 <td style="text-align: right;">
                     <button class="btn-icon btn-edit" onclick="prepararEdicaoUsuario(${index})"><i class="fas fa-cog"></i></button>
