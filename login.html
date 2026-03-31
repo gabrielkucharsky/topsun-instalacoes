@@ -6,11 +6,12 @@
     <title>Login - Instalações Topsun</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="login-body">
 
     <div class="card-login">
-        <h2><i class="fas fa-solar-panel"></i> Topsun</h2>
+        <h2><i class="fas fa-sun"></i> TOPSUN</h2>
         <p>Faça login para gerenciar as equipes</p>
         
         <form onsubmit="fazerLogin(event)">
@@ -29,13 +30,20 @@
 
             <p id="msgErro" class="erro-login"><i class="fas fa-exclamation-circle"></i> E-mail ou senha incorretos!</p>
 
-            <button type="submit" class="btn-primary" style="margin-top: 15px;">
+            <button type="submit" class="btn-primary" id="btnEntrar" style="margin-top: 15px;">
                 <i class="fas fa-sign-in-alt"></i> Entrar no Sistema
             </button>
         </form>
     </div>
 
     <script>
+        // ==========================================
+        // CONEXÃO SUPABASE
+        // ==========================================
+        const supabaseUrl = 'https://rbtluvnmqafznaxtagtn.supabase.co';
+        const supabaseKey = 'sb_publishable_YgSqyrY5ngJjP-qCPp1fzg_31Kic8I6';
+        const supabaseAPI = window.supabase.createClient(supabaseUrl, supabaseKey);
+
         function alternarSenha() {
             const inputSenha = document.getElementById('loginSenha');
             const iconeOlho = document.getElementById('togglePassword');
@@ -50,24 +58,47 @@
             }
         }
 
-        function fazerLogin(event) {
-            event.preventDefault(); // Evita que a página recarregue
+        async function fazerLogin(event) {
+            event.preventDefault(); 
             const email = document.getElementById('loginEmail').value;
             const senha = document.getElementById('loginSenha').value;
             const msgErro = document.getElementById('msgErro');
             const card = document.querySelector('.card-login');
+            const btnEntrar = document.getElementById('btnEntrar');
 
-            // Credenciais provisórias para teste
-            if (email === 'admin@topsun.com.br' && senha === 'admin123') {
-                // Salva uma chave temporária no navegador (se apaga ao fechar a aba)
-                sessionStorage.setItem('topsun_logado', 'true');
-                // Redireciona para o painel principal
-                window.location.href = 'index.html';
-            } else {
-                msgErro.style.display = 'block';
-                // Efeito de tremer o card em caso de erro
-                card.style.animation = 'shake 0.4s';
-                setTimeout(() => card.style.animation = '', 400);
+            btnEntrar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
+            btnEntrar.disabled = true;
+
+            try {
+                // Busca no banco de dados nas nuvens
+                const { data, error } = await supabaseAPI
+                    .from('usuarios')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('senha', senha)
+                    .single();
+
+                if (data) {
+                    sessionStorage.setItem('topsun_logado', 'true');
+                    sessionStorage.setItem('topsun_user_nome', data.nome);
+                    sessionStorage.setItem('topsun_user_nivel', data.nivel);
+                    window.location.href = 'index.html';
+                } else {
+                    throw new Error("Credenciais inválidas");
+                }
+            } catch (err) {
+                // Caso não tenha ninguém no banco (primeiro acesso)
+                if (email === 'admin@topsun.com.br' && senha === 'admin123') {
+                    sessionStorage.setItem('topsun_logado', 'true');
+                    sessionStorage.setItem('topsun_user_nivel', 'Admin');
+                    window.location.href = 'index.html';
+                } else {
+                    msgErro.style.display = 'block';
+                    card.style.animation = 'shake 0.4s';
+                    setTimeout(() => card.style.animation = '', 400);
+                    btnEntrar.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
+                    btnEntrar.disabled = false;
+                }
             }
         }
     </script>
