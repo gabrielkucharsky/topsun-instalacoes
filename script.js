@@ -1,9 +1,18 @@
 // ==========================================
-// CONEXÃO SUPABASE
+// CONEXÃO SUPABASE SEGURA (Não vai travar o site se a net falhar)
 // ==========================================
-const supabaseUrl = 'https://rbtluvnmqafznaxtagtn.supabase.co';
-const supabaseKey = 'sb_publishable_YgSqyrY5ngJjP-qCPp1fzg_31Kic8I6';
-const supabaseAPI = window.supabase.createClient(supabaseUrl, supabaseKey);
+let supabaseAPI = null;
+try {
+    const supabaseUrl = 'https://rbtluvnmqafznaxtagtn.supabase.co';
+    const supabaseKey = 'sb_publishable_YgSqyrY5ngJjP-qCPp1fzg_31Kic8I6';
+    if (window.supabase) {
+        supabaseAPI = window.supabase.createClient(supabaseUrl, supabaseKey);
+    } else {
+        console.error("Aviso: Biblioteca do Supabase demorou a responder.");
+    }
+} catch (e) {
+    console.error("Erro na conexão com o banco:", e);
+}
 
 // Arrays globais para guardar o que vier do banco
 let listaEquipesGlobal = [];
@@ -22,9 +31,12 @@ function sairSistema() {
 }
 
 // Controle de Aba Oculta para usuários comuns
-if (sessionStorage.getItem('topsun_user_nivel') === 'Comum') {
-    document.getElementById('btn-usuarios').style.display = 'none';
-}
+try {
+    if (sessionStorage.getItem('topsun_user_nivel') === 'Comum') {
+        const btnUsuarios = document.getElementById('btn-usuarios');
+        if(btnUsuarios) btnUsuarios.style.display = 'none';
+    }
+} catch(e) {}
 
 const regioesDisponiveis = [
     "Oeste SC", "Norte SC", "Serrana SC", "Vale do Itajaí", "Grande Florianópolis", "Sul SC",
@@ -38,6 +50,7 @@ const regioesDisponiveis = [
 
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
+    if(!container) return;
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = message;
@@ -61,24 +74,37 @@ function mostrarAba(idAba) {
     if(idAba === 'aba-usuarios') document.getElementById('btn-usuarios').classList.add('active');
 }
 
+// ==========================================
+// PREENCHIMENTO DINÂMICO DOS SELECTS (VERSÃO À PROVA DE FALHAS)
+// ==========================================
 function preencherSelectsRegiaoBase() {
     const selectCadastro = document.getElementById('regiaoBase');
     const selectEdicao = document.getElementById('editRegiaoBase');
-    if (!selectCadastro || !selectEdicao) return;
 
     let optionsHTML = '<option value="">Selecione uma região...</option>';
     regioesDisponiveis.sort().forEach(regiao => {
         optionsHTML += `<option value="${regiao}">${regiao}</option>`;
     });
 
-    selectCadastro.innerHTML = optionsHTML;
-    selectEdicao.innerHTML = optionsHTML;
+    // Coloca as opções apenas se a caixa existir na tela
+    if (selectCadastro) selectCadastro.innerHTML = optionsHTML;
+    if (selectEdicao) selectEdicao.innerHTML = optionsHTML;
+}
+
+function gerarCheckboxesRegioes() {
+    const container = document.getElementById('lista-checkbox-regioes');
+    if(!container) return;
+    container.innerHTML = '';
+    regioesDisponiveis.sort().forEach(regiao => {
+        container.innerHTML += `<label class="item-checkbox"><input type="checkbox" name="regiao" value="${regiao}"><span>${regiao}</span></label>`;
+    });
 }
 
 // ==========================================
 // CRUD: USUÁRIOS NO SUPABASE
 // ==========================================
 async function carregarUsuariosDoBanco() {
+    if(!supabaseAPI) return;
     const { data, error } = await supabaseAPI.from('usuarios').select('*');
     if (error) { console.error(error); return; }
     listaUsuariosGlobal = data || [];
@@ -86,6 +112,8 @@ async function carregarUsuariosDoBanco() {
 }
 
 async function salvarUsuario() {
+    if(!supabaseAPI) { showToast("Banco de dados desconectado", "error"); return; }
+    
     const idEdit = document.getElementById('editUsuarioId').value;
     const nome = document.getElementById('nomeUsuario').value;
     const email = document.getElementById('emailUsuario').value;
@@ -98,18 +126,11 @@ async function salvarUsuario() {
     }
     
     if (idEdit) {
-        // Update
-        const { error } = await supabaseAPI
-            .from('usuarios')
-            .update({ nome, email, senha, nivel })
-            .eq('id', idEdit);
+        const { error } = await supabaseAPI.from('usuarios').update({ nome, email, senha, nivel }).eq('id', idEdit);
         if (error) { showToast("Erro ao editar.", "error"); return; }
         showToast("Usuário atualizado com sucesso!");
     } else {
-        // Insert
-        const { error } = await supabaseAPI
-            .from('usuarios')
-            .insert([{ nome, email, senha, nivel }]);
+        const { error } = await supabaseAPI.from('usuarios').insert([{ nome, email, senha, nivel }]);
         if (error) { showToast("Erro ao cadastrar.", "error"); return; }
         showToast("Usuário cadastrado com sucesso!");
     }
@@ -148,10 +169,16 @@ function renderizarTabelaUsuarios() {
     const emptyState = document.getElementById('empty-state-usuarios');
     const contador = document.getElementById('contador-usuarios');
     
+    if(!listaUsuarios) return;
+
     listaUsuarios.innerHTML = '';
-    contador.innerText = listaUsuariosGlobal.length;
-    if(listaUsuariosGlobal.length === 0) emptyState.style.display = 'block';
-    else emptyState.style.display = 'none';
+    if(contador) contador.innerText = listaUsuariosGlobal.length;
+    
+    if(listaUsuariosGlobal.length === 0) {
+        if(emptyState) emptyState.style.display = 'block';
+    } else {
+        if(emptyState) emptyState.style.display = 'none';
+    }
 
     listaUsuariosGlobal.forEach((user, index) => {
         const badgeClasse = user.nivel === 'Admin' ? 'badge-admin' : 'badge-comum';
@@ -168,6 +195,7 @@ function renderizarTabelaUsuarios() {
 }
 
 async function removerUsuario(id, nivel) {
+    if(!supabaseAPI) return;
     const admins = listaUsuariosGlobal.filter(u => u.nivel === 'Admin');
     if (nivel === 'Admin' && admins.length <= 1) {
         showToast("Você não pode excluir o último Administrador!", "error");
@@ -187,14 +215,22 @@ async function removerUsuario(id, nivel) {
 // CRUD: EQUIPES NO SUPABASE
 // ==========================================
 async function carregarEquipesDoBanco() {
+    if(!supabaseAPI) {
+        const loader = document.getElementById('loading-equipes');
+        if(loader) loader.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Falha ao conectar no banco.';
+        return;
+    }
     const { data, error } = await supabaseAPI.from('equipes').select('*');
-    document.getElementById('loading-equipes').style.display = 'none';
+    const loader = document.getElementById('loading-equipes');
+    if(loader) loader.style.display = 'none';
+    
     if (error) { console.error(error); return; }
     listaEquipesGlobal = data || [];
     renderizarTudoEquipes();
 }
 
 async function salvarEquipe() {
+    if(!supabaseAPI) return;
     const nome = document.getElementById('nomeEquipe').value;
     const resp = document.getElementById('respEquipe').value;
     const regiaoBase = document.getElementById('regiaoBase').value;
@@ -227,11 +263,17 @@ function renderizarTudoEquipes() {
     const emptyState = document.getElementById('empty-state');
     const contador = document.getElementById('contador-equipes');
     
+    if(!displayPrincipal || !listaGestao) return;
+
     displayPrincipal.innerHTML = '';
     listaGestao.innerHTML = '';
-    contador.innerText = listaEquipesGlobal.length;
-    if(listaEquipesGlobal.length === 0) emptyState.style.display = 'block';
-    else emptyState.style.display = 'none';
+    if(contador) contador.innerText = listaEquipesGlobal.length;
+    
+    if(listaEquipesGlobal.length === 0) {
+        if(emptyState) emptyState.style.display = 'block';
+    } else {
+        if(emptyState) emptyState.style.display = 'none';
+    }
     
     listaEquipesGlobal.forEach((eq, index) => {
         const statusClasse = eq.status === "Ativo" ? "status-ativo" : "status-inativo";
@@ -332,6 +374,7 @@ function abrirEdicao(index) {
 }
 
 async function confirmarEdicao() {
+    if(!supabaseAPI) return;
     const id = document.getElementById('editEquipeId').value;
     const selecionadas = Array.from(document.querySelectorAll('input[name="regiao"]:checked')).map(cb => cb.value);
     
@@ -356,6 +399,7 @@ async function confirmarEdicao() {
 }
 
 async function removerEquipe(id) {
+    if(!supabaseAPI) return;
     if(confirm("Deseja excluir permanentemente esta equipe?")) {
         const { error } = await supabaseAPI.from('equipes').delete().eq('id', id);
         if(error) { showToast("Erro ao excluir", "error"); return; }
