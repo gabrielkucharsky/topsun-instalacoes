@@ -1,3 +1,14 @@
+// ==========================================
+// CONEXÃO SUPABASE
+// ==========================================
+const supabaseUrl = 'https://rbtluvnmqafznaxtagtn.supabase.co';
+const supabaseKey = 'sb_publishable_YgSqyrY5ngJjP-qCPp1fzg_31Kic8I6';
+const supabaseAPI = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+// Arrays globais para guardar o que vier do banco
+let listaEquipesGlobal = [];
+let listaUsuariosGlobal = [];
+
 // TRAVA DE SEGURANÇA
 if (sessionStorage.getItem('topsun_logado') !== 'true') {
     window.location.href = 'login.html';
@@ -5,7 +16,14 @@ if (sessionStorage.getItem('topsun_logado') !== 'true') {
 
 function sairSistema() {
     sessionStorage.removeItem('topsun_logado');
+    sessionStorage.removeItem('topsun_user_nome');
+    sessionStorage.removeItem('topsun_user_nivel');
     window.location.href = 'login.html';
+}
+
+// Controle de Aba Oculta para usuários comuns
+if (sessionStorage.getItem('topsun_user_nivel') === 'Comum') {
+    document.getElementById('btn-usuarios').style.display = 'none';
 }
 
 const regioesDisponiveis = [
@@ -43,17 +61,12 @@ function mostrarAba(idAba) {
     if(idAba === 'aba-usuarios') document.getElementById('btn-usuarios').classList.add('active');
 }
 
-// ==========================================
-// PREENCHIMENTO DINÂMICO DOS SELECTS
-// ==========================================
 function preencherSelectsRegiaoBase() {
     const selectCadastro = document.getElementById('regiaoBase');
     const selectEdicao = document.getElementById('editRegiaoBase');
-    
     if (!selectCadastro || !selectEdicao) return;
 
     let optionsHTML = '<option value="">Selecione uma região...</option>';
-    
     regioesDisponiveis.sort().forEach(regiao => {
         optionsHTML += `<option value="${regiao}">${regiao}</option>`;
     });
@@ -63,10 +76,17 @@ function preencherSelectsRegiaoBase() {
 }
 
 // ==========================================
-// LÓGICA DE USUÁRIOS
+// CRUD: USUÁRIOS NO SUPABASE
 // ==========================================
-function salvarUsuario() {
-    const indexEdit = document.getElementById('editUsuarioIndex').value;
+async function carregarUsuariosDoBanco() {
+    const { data, error } = await supabaseAPI.from('usuarios').select('*');
+    if (error) { console.error(error); return; }
+    listaUsuariosGlobal = data || [];
+    renderizarTabelaUsuarios();
+}
+
+async function salvarUsuario() {
+    const idEdit = document.getElementById('editUsuarioId').value;
     const nome = document.getElementById('nomeUsuario').value;
     const email = document.getElementById('emailUsuario').value;
     const senha = document.getElementById('senhaUsuario').value;
@@ -77,36 +97,30 @@ function salvarUsuario() {
         return; 
     }
     
-    let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    
-    if (indexEdit !== "") {
-        const emailExiste = usuarios.find((u, i) => u.email === email && i != indexEdit);
-        if(emailExiste) {
-            showToast("Este e-mail já pertence a outro usuário!", "error");
-            return;
-        }
-        usuarios[indexEdit] = { nome, email, senha, nivel };
+    if (idEdit) {
+        // Update
+        const { error } = await supabaseAPI
+            .from('usuarios')
+            .update({ nome, email, senha, nivel })
+            .eq('id', idEdit);
+        if (error) { showToast("Erro ao editar.", "error"); return; }
         showToast("Usuário atualizado com sucesso!");
     } else {
-        const emailExiste = usuarios.find(u => u.email === email);
-        if(emailExiste) {
-            showToast("Este e-mail já está cadastrado!", "error");
-            return;
-        }
-        usuarios.push({ nome, email, senha, nivel });
+        // Insert
+        const { error } = await supabaseAPI
+            .from('usuarios')
+            .insert([{ nome, email, senha, nivel }]);
+        if (error) { showToast("Erro ao cadastrar.", "error"); return; }
         showToast("Usuário cadastrado com sucesso!");
     }
 
-    localStorage.setItem('usuarios', JSON.stringify(usuarios));
     cancelarEdicaoUsuario(); 
-    atualizarUsuarios();
+    carregarUsuariosDoBanco();
 }
 
 function prepararEdicaoUsuario(index) {
-    let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    let user = usuarios[index];
-    
-    document.getElementById('editUsuarioIndex').value = index;
+    let user = listaUsuariosGlobal[index];
+    document.getElementById('editUsuarioId').value = user.id;
     document.getElementById('nomeUsuario').value = user.nome;
     document.getElementById('emailUsuario').value = user.email;
     document.getElementById('senhaUsuario').value = user.senha;
@@ -118,7 +132,7 @@ function prepararEdicaoUsuario(index) {
 }
 
 function cancelarEdicaoUsuario() {
-    document.getElementById('editUsuarioIndex').value = '';
+    document.getElementById('editUsuarioId').value = '';
     document.getElementById('nomeUsuario').value = '';
     document.getElementById('emailUsuario').value = '';
     document.getElementById('senhaUsuario').value = '';
@@ -129,68 +143,58 @@ function cancelarEdicaoUsuario() {
     document.getElementById('btnCancelarEdicaoUsuario').style.display = 'none';
 }
 
-function atualizarUsuarios() {
+function renderizarTabelaUsuarios() {
     const listaUsuarios = document.getElementById('lista-usuarios-gestao');
     const emptyState = document.getElementById('empty-state-usuarios');
     const contador = document.getElementById('contador-usuarios');
     
-    let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    if(usuarios.length === 0) {
-        usuarios.push({ nome: "Administrador", email: "admin@topsun.com.br", senha: "123", nivel: "Admin" });
-        localStorage.setItem('usuarios', JSON.stringify(usuarios));
-    }
-
     listaUsuarios.innerHTML = '';
-    contador.innerText = usuarios.length;
-    
-    if(usuarios.length === 0) emptyState.style.display = 'block';
+    contador.innerText = listaUsuariosGlobal.length;
+    if(listaUsuariosGlobal.length === 0) emptyState.style.display = 'block';
     else emptyState.style.display = 'none';
 
-    usuarios.forEach((user, index) => {
+    listaUsuariosGlobal.forEach((user, index) => {
         const badgeClasse = user.nivel === 'Admin' ? 'badge-admin' : 'badge-comum';
-        
         listaUsuarios.innerHTML += `
             <tr>
                 <td><strong>${user.nome}</strong><br><small style="color:#7f8c8d">${user.email}</small></td>
                 <td><span class="badge-status ${badgeClasse}">${user.nivel}</span></td>
                 <td style="text-align: right;">
-                    <button class="btn-icon btn-edit" onclick="prepararEdicaoUsuario(${index})" title="Editar Usuário"><i class="fas fa-cog"></i></button>
-                    <button class="btn-icon btn-del" onclick="removerUsuario(${index})" title="Excluir Usuário"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon btn-edit" onclick="prepararEdicaoUsuario(${index})"><i class="fas fa-cog"></i></button>
+                    <button class="btn-icon btn-del" onclick="removerUsuario(${user.id}, '${user.nivel}')"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
     });
 }
 
-function removerUsuario(index) {
-    let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    const admins = usuarios.filter(u => u.nivel === 'Admin');
-    if (usuarios[index].nivel === 'Admin' && admins.length <= 1) {
+async function removerUsuario(id, nivel) {
+    const admins = listaUsuariosGlobal.filter(u => u.nivel === 'Admin');
+    if (nivel === 'Admin' && admins.length <= 1) {
         showToast("Você não pode excluir o último Administrador!", "error");
         return;
     }
 
     if(confirm("Deseja realmente excluir este usuário?")) {
-        usuarios.splice(index, 1);
-        localStorage.setItem('usuarios', JSON.stringify(usuarios));
+        const { error } = await supabaseAPI.from('usuarios').delete().eq('id', id);
+        if(error) { showToast("Erro ao excluir", "error"); return;}
         showToast("Usuário removido.", "error");
         cancelarEdicaoUsuario();
-        atualizarUsuarios();
+        carregarUsuariosDoBanco();
     }
 }
 
 // ==========================================
-// LÓGICA DE EQUIPES
+// CRUD: EQUIPES NO SUPABASE
 // ==========================================
-function gerarCheckboxesRegioes() {
-    const container = document.getElementById('lista-checkbox-regioes');
-    if(!container) return;
-    container.innerHTML = '';
-    regioesDisponiveis.sort().forEach(regiao => {
-        container.innerHTML += `<label class="item-checkbox"><input type="checkbox" name="regiao" value="${regiao}"><span>${regiao}</span></label>`;
-    });
+async function carregarEquipesDoBanco() {
+    const { data, error } = await supabaseAPI.from('equipes').select('*');
+    document.getElementById('loading-equipes').style.display = 'none';
+    if (error) { console.error(error); return; }
+    listaEquipesGlobal = data || [];
+    renderizarTudoEquipes();
 }
 
-function salvarEquipe() {
+async function salvarEquipe() {
     const nome = document.getElementById('nomeEquipe').value;
     const resp = document.getElementById('respEquipe').value;
     const regiaoBase = document.getElementById('regiaoBase').value;
@@ -200,40 +204,36 @@ function salvarEquipe() {
         return; 
     }
     
-    let equipes = JSON.parse(localStorage.getItem('equipes')) || [];
-    equipes.push({ 
-        nome, 
-        resp, 
-        regiaoBase,
-        status: "Ativo", 
+    const novaEquipe = { 
+        nome, resp, regiaoBase, status: "Ativo", 
         custo20: 0, custo65: 0, custo66: 0, 
         cidades: [], obs: "" 
-    });
-    localStorage.setItem('equipes', JSON.stringify(equipes));
+    };
+
+    const { error } = await supabaseAPI.from('equipes').insert([novaEquipe]);
+    if(error) { showToast("Erro ao salvar", "error"); return; }
     
     document.getElementById('nomeEquipe').value = '';
     document.getElementById('respEquipe').value = '';
     document.getElementById('regiaoBase').value = '';
     
     showToast("Equipe cadastrada!");
-    atualizarEquipes();
+    carregarEquipesDoBanco();
 }
 
-function atualizarEquipes() {
+function renderizarTudoEquipes() {
     const displayPrincipal = document.getElementById('display-equipes');
     const listaGestao = document.getElementById('lista-equipes-gestao');
     const emptyState = document.getElementById('empty-state');
     const contador = document.getElementById('contador-equipes');
-    const equipes = JSON.parse(localStorage.getItem('equipes')) || [];
     
     displayPrincipal.innerHTML = '';
     listaGestao.innerHTML = '';
-    contador.innerText = equipes.length;
-    
-    if(equipes.length === 0) emptyState.style.display = 'block';
+    contador.innerText = listaEquipesGlobal.length;
+    if(listaEquipesGlobal.length === 0) emptyState.style.display = 'block';
     else emptyState.style.display = 'none';
     
-    equipes.forEach((eq, index) => {
+    listaEquipesGlobal.forEach((eq, index) => {
         const statusClasse = eq.status === "Ativo" ? "status-ativo" : "status-inativo";
         const regioesFiltro = Array.isArray(eq.cidades) ? eq.cidades.join(' ') : '';
         const termosDeBusca = `${eq.nome} ${eq.resp} ${eq.regiaoBase || ''} ${regioesFiltro}`.toLowerCase();
@@ -261,15 +261,14 @@ function atualizarEquipes() {
                 <td><span class="badge-status ${statusClasse}">${eq.status}</span></td>
                 <td style="text-align: right;">
                     <button class="btn-icon btn-edit" onclick="abrirEdicao(${index})"><i class="fas fa-cog"></i></button>
-                    <button class="btn-icon btn-del" onclick="removerEquipe(${index})"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon btn-del" onclick="removerEquipe(${eq.id})"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
     });
 }
 
 function abrirDetalhes(index) {
-    const equipes = JSON.parse(localStorage.getItem('equipes')) || [];
-    const eq = equipes[index];
+    const eq = listaEquipesGlobal[index];
     const modal = document.getElementById('modalDetalhes');
     const conteudo = document.getElementById('conteudoModal');
     
@@ -308,21 +307,16 @@ function fecharModal() { document.getElementById('modalDetalhes').style.display 
 function filtrarEquipes() {
     const termo = document.getElementById('inputBusca').value.toLowerCase();
     const cards = document.querySelectorAll('.card-equipe-resumo');
-    
     cards.forEach(card => {
         const conteudoParaBusca = card.getAttribute('data-busca');
-        if(conteudoParaBusca.includes(termo)) {
-            card.style.display = "flex";
-        } else {
-            card.style.display = "none";
-        }
+        if(conteudoParaBusca.includes(termo)) card.style.display = "flex";
+        else card.style.display = "none";
     });
 }
 
 function abrirEdicao(index) {
-    const equipes = JSON.parse(localStorage.getItem('equipes')) || [];
-    const eq = equipes[index];
-    document.getElementById('editIndex').value = index;
+    const eq = listaEquipesGlobal[index];
+    document.getElementById('editEquipeId').value = eq.id; 
     document.getElementById('editNomeEquipe').value = eq.nome;
     document.getElementById('editRespEquipe').value = eq.resp;
     document.getElementById('editRegiaoBase').value = eq.regiaoBase || "";
@@ -333,46 +327,47 @@ function abrirEdicao(index) {
     document.getElementById('editObs').value = eq.obs || "";
 
     const checkboxes = document.querySelectorAll('input[name="regiao"]');
-    checkboxes.forEach(cb => { cb.checked = eq.cidades.includes(cb.value); });
+    checkboxes.forEach(cb => { cb.checked = (eq.cidades || []).includes(cb.value); });
     mostrarAba('aba-editar-equipe');
 }
 
-function confirmarEdicao() {
-    const index = document.getElementById('editIndex').value;
-    let equipes = JSON.parse(localStorage.getItem('equipes')) || [];
+async function confirmarEdicao() {
+    const id = document.getElementById('editEquipeId').value;
     const selecionadas = Array.from(document.querySelectorAll('input[name="regiao"]:checked')).map(cb => cb.value);
     
-    if(equipes[index]) {
-        equipes[index].nome = document.getElementById('editNomeEquipe').value;
-        equipes[index].resp = document.getElementById('editRespEquipe').value;
-        equipes[index].regiaoBase = document.getElementById('editRegiaoBase').value;
-        equipes[index].status = document.getElementById('editStatus').value;
-        equipes[index].custo20 = parseFloat(document.getElementById('editCusto20').value) || 0;
-        equipes[index].custo65 = parseFloat(document.getElementById('editCusto65').value) || 0;
-        equipes[index].custo66 = parseFloat(document.getElementById('editCusto66').value) || 0;
-        equipes[index].obs = document.getElementById('editObs').value;
-        equipes[index].cidades = selecionadas;
-    }
+    const equipeAtualizada = {
+        nome: document.getElementById('editNomeEquipe').value,
+        resp: document.getElementById('editRespEquipe').value,
+        regiaoBase: document.getElementById('editRegiaoBase').value,
+        status: document.getElementById('editStatus').value,
+        custo20: parseFloat(document.getElementById('editCusto20').value) || 0,
+        custo65: parseFloat(document.getElementById('editCusto65').value) || 0,
+        custo66: parseFloat(document.getElementById('editCusto66').value) || 0,
+        obs: document.getElementById('editObs').value,
+        cidades: selecionadas
+    };
+
+    const { error } = await supabaseAPI.from('equipes').update(equipeAtualizada).eq('id', id);
+    if(error) { showToast("Erro ao salvar", "error"); return; }
     
-    localStorage.setItem('equipes', JSON.stringify(equipes));
     showToast("Alterações salvas!");
-    atualizarEquipes();
+    carregarEquipesDoBanco();
     mostrarAba('aba-equipe');
 }
 
-function removerEquipe(index) {
+async function removerEquipe(id) {
     if(confirm("Deseja excluir permanentemente esta equipe?")) {
-        let equipes = JSON.parse(localStorage.getItem('equipes')) || [];
-        equipes.splice(index, 1);
-        localStorage.setItem('equipes', JSON.stringify(equipes));
+        const { error } = await supabaseAPI.from('equipes').delete().eq('id', id);
+        if(error) { showToast("Erro ao excluir", "error"); return; }
         showToast("Equipe removida.", "error");
-        atualizarEquipes();
+        carregarEquipesDoBanco();
     }
 }
 
+// INICIALIZAÇÃO
 window.onload = function() {
     gerarCheckboxesRegioes();
     preencherSelectsRegiaoBase();
-    atualizarEquipes();
-    atualizarUsuarios();
+    carregarEquipesDoBanco(); 
+    carregarUsuariosDoBanco(); 
 };
