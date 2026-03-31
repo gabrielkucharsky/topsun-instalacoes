@@ -16,8 +16,8 @@
         
         <form onsubmit="fazerLogin(event)">
             <div class="input-group" style="text-align: left;">
-                <label>E-mail</label>
-                <input type="email" id="loginEmail" placeholder="admin@topsun.com.br" required autocomplete="email" class="input-estilizado">
+                <label>Login de Acesso</label>
+                <input type="text" id="loginEmail" placeholder="ex: admin" required autocomplete="username" class="input-estilizado">
             </div>
 
             <div class="input-group" style="text-align: left;">
@@ -28,7 +28,7 @@
                 </div>
             </div>
 
-            <p id="msgErro" class="erro-login"><i class="fas fa-exclamation-circle"></i> E-mail ou senha incorretos!</p>
+            <p id="msgErro" class="erro-login"><i class="fas fa-exclamation-circle"></i> Login ou senha incorretos!</p>
 
             <button type="submit" class="btn-primary" id="btnEntrar" style="margin-top: 15px;">
                 <i class="fas fa-sign-in-alt"></i> Entrar no Sistema
@@ -60,7 +60,7 @@
 
         async function fazerLogin(event) {
             event.preventDefault(); 
-            const email = document.getElementById('loginEmail').value;
+            const loginInformado = document.getElementById('loginEmail').value.trim();
             const senha = document.getElementById('loginSenha').value;
             const msgErro = document.getElementById('msgErro');
             const card = document.querySelector('.card-login');
@@ -70,11 +70,11 @@
             btnEntrar.disabled = true;
 
             try {
-                // Busca no banco de dados nas nuvens
+                // Busca no banco de dados nas nuvens usando a coluna 'email' como login
                 const { data, error } = await supabaseAPI
                     .from('usuarios')
                     .select('*')
-                    .eq('email', email)
+                    .eq('email', loginInformado)
                     .eq('senha', senha)
                     .single();
 
@@ -87,8 +87,8 @@
                     throw new Error("Credenciais inválidas");
                 }
             } catch (err) {
-                // Caso não tenha ninguém no banco (primeiro acesso)
-                if (email === 'admin@topsun.com.br' && senha === 'admin123') {
+                // Acesso de emergência caso o banco esteja vazio
+                if (loginInformado === 'admin' && senha === 'admin123') {
                     sessionStorage.setItem('topsun_logado', 'true');
                     sessionStorage.setItem('topsun_user_nivel', 'Admin');
                     window.location.href = 'index.html';
