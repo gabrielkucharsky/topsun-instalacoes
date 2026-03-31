@@ -6,6 +6,7 @@
     <title>Instalações Topsun</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -35,7 +36,9 @@
                     <input type="text" id="inputBusca" placeholder="Filtrar por nome ou região..." onkeyup="filtrarEquipes()">
                 </div>
             </div>
-            <div id="display-equipes" class="grid-equipes"></div>
+            <div id="display-equipes" class="grid-equipes">
+                <p id="loading-equipes" style="color: #5e35b1; font-weight: bold;"><i class="fas fa-spinner fa-spin"></i> Sincronizando com a nuvem...</p>
+            </div>
         </section>
 
         <section id="aba-equipe" class="aba-conteudo" style="display:none;">
@@ -93,7 +96,7 @@
                 <div class="card-cadastro">
                     <h3 id="tituloCadastroUsuario"><i class="fas fa-user-plus"></i> Novo Usuário</h3>
                     <div class="formulario">
-                        <input type="hidden" id="editUsuarioIndex" value="">
+                        <input type="hidden" id="editUsuarioId" value="">
 
                         <div class="input-group">
                             <label><i class="fas fa-id-card"></i> Nome Completo</label>
@@ -159,7 +162,7 @@
 
                 <div class="card-cadastro-full">
                     <h2 id="titulo-edicao">Configurar Equipe</h2>
-                    <input type="hidden" id="editIndex">
+                    <input type="hidden" id="editEquipeId">
 
                     <div class="formulario grid-form">
                         <div class="input-group">
