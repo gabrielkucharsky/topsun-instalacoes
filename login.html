@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Instalações Topsun</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="login-body">
+
+    <div class="card-login">
+        <h2><i class="fas fa-solar-panel"></i> Topsun</h2>
+        <p>Faça login para gerenciar as equipes</p>
+        
+        <form onsubmit="fazerLogin(event)">
+            <div class="input-group" style="text-align: left;">
+                <label>E-mail</label>
+                <input type="email" id="loginEmail" placeholder="admin@topsun.com.br" required autocomplete="email" class="input-estilizado">
+            </div>
+
+            <div class="input-group" style="text-align: left;">
+                <label>Senha</label>
+                <div class="senha-wrapper">
+                    <input type="password" id="loginSenha" placeholder="••••••••" required autocomplete="current-password" class="input-estilizado">
+                    <i class="fas fa-eye" id="togglePassword" onclick="alternarSenha()"></i>
+                </div>
+            </div>
+
+            <p id="msgErro" class="erro-login"><i class="fas fa-exclamation-circle"></i> E-mail ou senha incorretos!</p>
+
+            <button type="submit" class="btn-primary" style="margin-top: 15px;">
+                <i class="fas fa-sign-in-alt"></i> Entrar no Sistema
+            </button>
+        </form>
+    </div>
+
+    <script>
+        function alternarSenha() {
+            const inputSenha = document.getElementById('loginSenha');
+            const iconeOlho = document.getElementById('togglePassword');
+            if (inputSenha.type === 'password') {
+                inputSenha.type = 'text';
+                iconeOlho.classList.remove('fa-eye');
+                iconeOlho.classList.add('fa-eye-slash');
+            } else {
+                inputSenha.type = 'password';
+                iconeOlho.classList.remove('fa-eye-slash');
+                iconeOlho.classList.add('fa-eye');
+            }
+        }
+
+        function fazerLogin(event) {
+            event.preventDefault(); // Evita que a página recarregue
+            const email = document.getElementById('loginEmail').value;
+            const senha = document.getElementById('loginSenha').value;
+            const msgErro = document.getElementById('msgErro');
+            const card = document.querySelector('.card-login');
+
+            // Credenciais provisórias para teste
+            if (email === 'admin@topsun.com.br' && senha === 'admin123') {
+                // Salva uma chave temporária no navegador (se apaga ao fechar a aba)
+                sessionStorage.setItem('topsun_logado', 'true');
+                // Redireciona para o painel principal
+                window.location.href = 'index.html';
+            } else {
+                msgErro.style.display = 'block';
+                // Efeito de tremer o card em caso de erro
+                card.style.animation = 'shake 0.4s';
+                setTimeout(() => card.style.animation = '', 400);
+            }
+        }
+    </script>
+</body>
+</html>

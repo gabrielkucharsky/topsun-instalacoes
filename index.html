@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instalações Topsun</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <header>
+        <div class="header-content">
+            <div class="logo-area">
+                <h2><i class="fas fa-sun"></i> TOPSUN</h2>
+            </div>
+            
+            <nav class="nav-container">
+                <button class="nav-btn active" id="btn-principal" onclick="mostrarAba('aba-principal')">CONSULTA</button>
+                <button class="nav-btn" id="btn-equipe" onclick="mostrarAba('aba-equipe')">EQUIPES</button>
+                <button class="nav-btn" id="btn-usuarios" onclick="mostrarAba('aba-usuarios')">USUÁRIOS</button>
+                <button class="nav-btn btn-sair" onclick="sairSistema()">SAIR</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="aba-principal" class="aba-conteudo">
+            <div class="section-header">
+                <h2>Equipes em Atividade</h2>
+                <div class="busca-wrapper">
+                    <i class="fas fa-search busca-icon"></i>
+                    <input type="text" id="inputBusca" placeholder="Filtrar por nome ou região..." onkeyup="filtrarEquipes()">
+                </div>
+            </div>
+            <div id="display-equipes" class="grid-equipes"></div>
+        </section>
+
+        <section id="aba-equipe" class="aba-conteudo" style="display:none;">
+            <div class="gestao-layout">
+                <div class="card-cadastro">
+                    <h3><i class="fas fa-plus-circle"></i> Nova Equipe</h3>
+                    <div class="formulario">
+                        <div class="input-group">
+                            <label><i class="fas fa-tag"></i> Nome da Equipe</label>
+                            <input type="text" id="nomeEquipe" placeholder="Ex: Jaraguá Soluções">
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-user"></i> Responsável</label>
+                            <input type="text" id="respEquipe" placeholder="Nome do encarregado">
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-map-marker-alt"></i> Região Base</label>
+                            <select id="regiaoBase" class="input-estilizado">
+                                <option value="">Selecione uma região...</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" onclick="salvarEquipe()">
+                            <i class="fas fa-check"></i> Cadastrar Equipe
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-lista">
+                    <div class="card-header-flex">
+                        <h3><i class="fas fa-list"></i> Equipes Cadastradas</h3>
+                        <span id="contador-equipes" class="badge-count">0</span>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Equipe / Resp</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-equipes-gestao"></tbody>
+                        </table>
+                        <div id="empty-state" style="display:none;" class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>Nenhuma equipe cadastrada.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-usuarios" class="aba-conteudo" style="display:none;">
+            <div class="gestao-layout">
+                <div class="card-cadastro">
+                    <h3 id="tituloCadastroUsuario"><i class="fas fa-user-plus"></i> Novo Usuário</h3>
+                    <div class="formulario">
+                        <input type="hidden" id="editUsuarioIndex" value="">
+
+                        <div class="input-group">
+                            <label><i class="fas fa-id-card"></i> Nome Completo</label>
+                            <input type="text" id="nomeUsuario" placeholder="Ex: João Silva">
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-envelope"></i> E-mail (Login)</label>
+                            <input type="email" id="emailUsuario" placeholder="joao@topsun.com.br">
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-lock"></i> Senha</label>
+                            <input type="password" id="senhaUsuario" placeholder="••••••••">
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-shield-alt"></i> Nível de Acesso</label>
+                            <select id="nivelUsuario" class="input-estilizado">
+                                <option value="Comum">Comum (Apenas Consulta)</option>
+                                <option value="Admin">Administrador (Total)</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" id="btnSalvarUsuario" onclick="salvarUsuario()">
+                            <i class="fas fa-check"></i> Cadastrar Usuário
+                        </button>
+                        
+                        <button class="btn-voltar-moderno" id="btnCancelarEdicaoUsuario" style="display:none; width: 100%; justify-content: center; margin-top: 10px; margin-bottom: 0;" onclick="cancelarEdicaoUsuario()">
+                            <i class="fas fa-times"></i> Cancelar Edição
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-lista">
+                    <div class="card-header-flex">
+                        <h3><i class="fas fa-users"></i> Usuários do Sistema</h3>
+                        <span id="contador-usuarios" class="badge-count">0</span>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Usuário / E-mail</th>
+                                    <th>Nível</th>
+                                    <th style="text-align: right;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-usuarios-gestao"></tbody>
+                        </table>
+                        <div id="empty-state-usuarios" style="display:none;" class="empty-state">
+                            <i class="fas fa-user-slash"></i>
+                            <p>Nenhum usuário cadastrado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-editar-equipe" class="aba-conteudo" style="display:none;">
+            <div class="edicao-container">
+                <div class="top-bar-edicao">
+                    <button onclick="mostrarAba('aba-equipe')" class="btn-voltar-moderno">
+                        <i class="fas fa-chevron-left"></i> Voltar para Gestão
+                    </button>
+                </div>
+
+                <div class="card-cadastro-full">
+                    <h2 id="titulo-edicao">Configurar Equipe</h2>
+                    <input type="hidden" id="editIndex">
+
+                    <div class="formulario grid-form">
+                        <div class="input-group">
+                            <label>Nome da Equipe</label>
+                            <input type="text" id="editNomeEquipe">
+                        </div>
+                        <div class="input-group">
+                            <label>Responsável (Dono)</label>
+                            <input type="text" id="editRespEquipe">
+                        </div>
+                        <div class="input-group">
+                            <label>Região Base</label>
+                            <select id="editRegiaoBase" class="input-estilizado">
+                                <option value="">Selecione uma região...</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Status</label>
+                            <select id="editStatus" class="input-estilizado">
+                                <option value="Ativo">Ativo</option>
+                                <option value="Inativo">Inativo</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Custo até 20m (R$)</label>
+                            <input type="number" id="editCusto20" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label>Custo até 65m (R$)</label>
+                            <input type="number" id="editCusto65" step="0.01">
+                        </div>
+                        <div class="input-group">
+                            <label>Custo acima 66m (R$)</label>
+                            <input type="number" id="editCusto66" step="0.01">
+                        </div>
+
+                        <div class="input-group full-width">
+                            <label>Observações</label>
+                            <textarea id="editObs" class="input-estilizado" rows="3" placeholder="Anotações..."></textarea>
+                        </div>
+
+                        <div class="input-group full-width">
+                            <label>Regiões Atendidas</label>
+                            <div id="lista-checkbox-regioes" class="container-checkbox"></div>
+                        </div>
+                        
+                        <button class="btn-primary full-width" onclick="confirmarEdicao()">
+                            <i class="fas fa-save"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div id="modalDetalhes" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="fecharModal()">&times;</span>
+                <div id="conteudoModal"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
