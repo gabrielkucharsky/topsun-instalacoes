@@ -320,18 +320,39 @@ function abrirDetalhes(index) {
         </div>
     ` : '';
 
-    conteudo.innerHTML = `
-        <div class="modal-header-info"><h2>${eq.nome}</h2><span class="badge-status ${eq.status === 'Ativo' ? 'status-ativo' : 'status-inativo'}">${eq.status}</span></div>
-        <div class="modal-grid">
-            <div class="info-item"><strong>Responsável:</strong> ${eq.resp}</div>
-            <div class="info-item"><strong>Região Base:</strong> <span style="color: var(--primary); font-weight: bold;">${eq.regiaoBase || 'Não definida'}</span></div>
-            
+    // ==========================================
+    // TRAVA DE SEGURANÇA PARA CUSTOS
+    // ==========================================
+    const nivelAcesso = sessionStorage.getItem('topsun_user_nivel');
+    let custosHTML = '';
+
+    if (nivelAcesso === 'Admin') {
+        // Se for Admin, mostra os valores reais
+        custosHTML = `
             <div class="info-custo-card">
                 <h4>Custos de Instalação</h4>
                 <div class="custo-row"><span>Até 20m:</span> <strong>R$ ${Number(eq.custo20).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
                 <div class="custo-row"><span>Até 65m:</span> <strong>R$ ${Number(eq.custo65).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
                 <div class="custo-row"><span>Acima 66m:</span> <strong>R$ ${Number(eq.custo66).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
             </div>
+        `;
+    } else {
+        // Se for Comum, mostra o bloqueio visual
+        custosHTML = `
+            <div class="info-custo-card" style="background: #fff5f5; border: 1px solid #ffe3e3;">
+                <h4 style="color: var(--danger); margin-bottom: 5px;"><i class="fas fa-lock"></i> Custos de Instalação</h4>
+                <p style="margin: 0; font-size: 0.85rem; color: #7f8c8d;">Informação restrita à diretoria.</p>
+            </div>
+        `;
+    }
+
+    conteudo.innerHTML = `
+        <div class="modal-header-info"><h2>${eq.nome}</h2><span class="badge-status ${eq.status === 'Ativo' ? 'status-ativo' : 'status-inativo'}">${eq.status}</span></div>
+        <div class="modal-grid">
+            <div class="info-item"><strong>Responsável:</strong> ${eq.resp}</div>
+            <div class="info-item"><strong>Região Base:</strong> <span style="color: var(--primary); font-weight: bold;">${eq.regiaoBase || 'Não definida'}</span></div>
+            
+            ${custosHTML}
             
             ${obsHTML}
             
